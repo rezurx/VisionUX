@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, Network, Palette, Users, TrendingUp, Shield, Layers, GitBranch, Download } from 'lucide-react';
+import { BarChart3, Network, Palette, Users, TrendingUp, Shield, Layers, GitBranch, Download, FileText } from 'lucide-react';
 import { 
   processStudyResults, 
   AgreementAnalysis, 
@@ -16,6 +16,8 @@ import AccessibilityScorecard from './AccessibilityScorecard';
 import DesignSystemMetrics from './DesignSystemMetrics';
 import CrossMethodAnalysis from './CrossMethodAnalysis';
 import DataExporter from './DataExporter';
+import AccessibilityDashboard from '../accessibility/AccessibilityDashboard';
+import { generateSampleAccessibilityData } from '../../data/sampleAccessibilityData';
 
 interface AnalyticsDashboardProps {
   studies: Study[];
@@ -277,12 +279,14 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         );
       case 'accessibility':
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 overflow-auto">
-            <AccessibilityScorecard 
-              accessibilityResults={accessibilityResults}
-              guidelines={[]}
-              width={Math.min(1000, window.innerWidth - 100)}
-              height={700}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-auto">
+            <AccessibilityDashboard
+              studyId={selectedStudyId || 0}
+              studyType="accessibility-audit"
+              initialResults={accessibilityResults.length > 0 ? accessibilityResults : generateSampleAccessibilityData()}
+              enableAllFeatures={true}
+              onConfigurationChange={(config) => console.log('Accessibility config updated:', config)}
+              onResultsUpdate={(results) => console.log('Accessibility results updated:', results)}
             />
           </div>
         );
@@ -401,7 +405,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             { id: 'dendrogram', label: 'Dendrogram', icon: Users, shortLabel: 'Tree' },
             { id: 'rainbow', label: 'Rainbow Chart', icon: Palette, shortLabel: 'Rainbow' },
             ...(enableMultiMethod ? [
-              { id: 'survey', label: 'Survey Analytics', icon: Survey, shortLabel: 'Survey' },
+              { id: 'survey', label: 'Survey Analytics', icon: FileText, shortLabel: 'Survey' },
               { id: 'accessibility', label: 'Accessibility', icon: Shield, shortLabel: 'A11y' },
               { id: 'design-system', label: 'Design System', icon: Layers, shortLabel: 'DS' },
               { id: 'cross-method', label: 'Cross-Method', icon: GitBranch, shortLabel: 'Cross' }

@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Settings, FileText, AlertTriangle, TrendingUp, Play, Eye } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Shield, Settings, FileText, AlertTriangle, TrendingUp, Play, Eye, Users, Clock, Target, Zap, BarChart3, Calendar, Filter, Download } from 'lucide-react';
 import AccessibilityScanner from './AccessibilityScanner';
 import AccessibilityIssueDetector from './AccessibilityIssueDetector';
 import AccessibilityReporting from './AccessibilityReporting';
 import AccessibilityConfiguration from './AccessibilityConfiguration';
 import AccessibilityScorecard from '../analytics/AccessibilityScorecard';
 import { AccessibilityUtils, AccessibilityComplianceReport } from '../../utils/accessibility';
+import { WCAGComplianceFramework, createWCAGFramework } from '../../utils/wcagCompliance';
 import { AccessibilityResult, AccessibilityAuditConfig, AccessibilityGuideline } from '../../types';
 
 interface AccessibilityDashboardProps {
@@ -40,9 +41,60 @@ const AccessibilityDashboard: React.FC<AccessibilityDashboardProps> = ({
     criticalIssues: 0,
     lastScanDate: null as Date | null
   });
+  const [timeRange, setTimeRange] = useState('7d'); // 24h, 7d, 30d, all
+  const [complianceTarget, setComplianceTarget] = useState<'A' | 'AA' | 'AAA'>('AA');
+  const [wcagFramework, setWcagFramework] = useState(() => createWCAGFramework('2.1', 'AA'));
+  const [selectedFilters, setSelectedFilters] = useState({
+    severity: 'all',
+    principle: 'all',
+    status: 'all'
+  });
+  const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
+  const [complianceHistory, setComplianceHistory] = useState<any[]>([]);
 
   // Get WCAG guidelines for the dashboard
   const wcagGuidelines = Object.values(AccessibilityUtils.guidelines);
+  
+  // Advanced analytics calculations
+  const advancedMetrics = useMemo(() => {
+    if (accessibilityResults.length === 0) return null;
+    
+    const allEvaluations = accessibilityResults.flatMap(r => r.evaluations);
+    const violations = allEvaluations.filter(e => e.status === 'fail');
+    
+    // WCAG Principle breakdown
+    const principleBreakdown = {
+      perceivable: violations.filter(v => wcagGuidelines.find(g => g.id === v.guidelineId)?.principle === 'perceivable').length,
+      operable: violations.filter(v => wcagGuidelines.find(g => g.id === v.guidelineId)?.principle === 'operable').length,
+      understandable: violations.filter(v => wcagGuidelines.find(g => g.id === v.guidelineId)?.principle === 'understandable').length,
+      robust: violations.filter(v => wcagGuidelines.find(g => g.id === v.guidelineId)?.principle === 'robust').length
+    };
+    
+    // Trend analysis
+    const scoreHistory = accessibilityResults.map(r => r.overallScore);
+    const trend = scoreHistory.length > 1 ? 
+      (scoreHistory[0] - scoreHistory[scoreHistory.length - 1]) / scoreHistory[scoreHistory.length - 1] * 100 : 0;
+    
+    // Compliance level assessment
+    const currentCompliance = wcagFramework.assessComplianceLevel(accessibilityResults);
+    
+    // Issue distribution by severity
+    const severityDistribution = {
+      critical: violations.filter(v => v.severity === 'critical').length,
+      high: violations.filter(v => v.severity === 'high').length,
+      medium: violations.filter(v => v.severity === 'medium').length,
+      low: violations.filter(v => v.severity === 'low').length
+    };
+    
+    return {
+      principleBreakdown,
+      trend,
+      currentCompliance,
+      severityDistribution,
+      complianceGaps: wcagFramework.generateComplianceGaps(accessibilityResults, complianceTarget).length,
+      improvementPotential: Math.max(0, 100 - dashboardStats.averageScore)
+    };
+  }, [accessibilityResults, wcagGuidelines, wcagFramework, complianceTarget, dashboardStats.averageScore]);
 
   useEffect(() => {
     updateDashboardStats();
@@ -307,6 +359,198 @@ const AccessibilityDashboard: React.FC<AccessibilityDashboardProps> = ({
                     >
                       View Reporting →
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Advanced Analytics Toggle */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="time-range" className="text-sm font-medium text-gray-700">Time Range:</label>
+                  <select 
+                    id="time-range"
+                    value={timeRange} 
+                    onChange={(e) => setTimeRange(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="24h">Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                    <option value="all">All Time</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="compliance-target" className="text-sm font-medium text-gray-700">Target:</label>
+                  <select 
+                    id="compliance-target"
+                    value={complianceTarget} 
+                    onChange={(e) => {
+                      const target = e.target.value as 'A' | 'AA' | 'AAA';
+                      setComplianceTarget(target);
+                      setWcagFramework(createWCAGFramework('2.1', target));
+                    }}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="A">WCAG A</option>
+                    <option value="AA">WCAG AA</option>
+                    <option value="AAA">WCAG AAA</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAdvancedAnalytics(!showAdvancedAnalytics)}
+                className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  showAdvancedAnalytics ? 'border-blue-300 text-blue-700 bg-blue-50' : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Advanced Analytics
+              </button>
+            </div>
+
+            {/* Advanced Metrics Grid */}
+            {showAdvancedAnalytics && advancedMetrics && (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700">Compliance</span>
+                  </div>
+                  <div className="text-xl font-bold text-blue-900">{advancedMetrics.currentCompliance}</div>
+                  <div className="text-xs text-blue-600">Current Level</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">Trend</span>
+                  </div>
+                  <div className={`text-xl font-bold ${
+                    advancedMetrics.trend > 0 ? 'text-green-900' : advancedMetrics.trend < 0 ? 'text-red-900' : 'text-gray-900'
+                  }`}>
+                    {advancedMetrics.trend > 0 ? '+' : ''}{advancedMetrics.trend.toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-green-600">Score Change</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="w-5 h-5 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-700">Gaps</span>
+                  </div>
+                  <div className="text-xl font-bold text-orange-900">{advancedMetrics.complianceGaps}</div>
+                  <div className="text-xs text-orange-600">To Target</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-700">Potential</span>
+                  </div>
+                  <div className="text-xl font-bold text-purple-900">{advancedMetrics.improvementPotential.toFixed(1)}%</div>
+                  <div className="text-xs text-purple-600">Improvement</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <span className="text-sm font-medium text-red-700">Critical</span>
+                  </div>
+                  <div className="text-xl font-bold text-red-900">{advancedMetrics.severityDistribution.critical}</div>
+                  <div className="text-xs text-red-600">Issues</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-5 h-5 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">Impact</span>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {Math.round((advancedMetrics.severityDistribution.critical + advancedMetrics.severityDistribution.high) * 2.5)}%
+                  </div>
+                  <div className="text-xs text-gray-600">Users Affected</div>
+                </div>
+              </div>
+            )}
+
+            {/* WCAG Principle Breakdown */}
+            {showAdvancedAnalytics && advancedMetrics && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white rounded-lg border p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                    WCAG Principle Analysis
+                  </h3>
+                  <div className="space-y-4">
+                    {Object.entries(advancedMetrics.principleBreakdown).map(([principle, count]) => {
+                      const total = Object.values(advancedMetrics.principleBreakdown).reduce((a, b) => a + b, 0);
+                      const percentage = total > 0 ? (count / total) * 100 : 0;
+                      return (
+                        <div key={principle} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              principle === 'perceivable' ? 'bg-blue-500' :
+                              principle === 'operable' ? 'bg-green-500' :
+                              principle === 'understandable' ? 'bg-yellow-500' : 'bg-purple-500'
+                            }`}></div>
+                            <span className="text-sm font-medium text-gray-700 capitalize">{principle}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${
+                                  principle === 'perceivable' ? 'bg-blue-500' :
+                                  principle === 'operable' ? 'bg-green-500' :
+                                  principle === 'understandable' ? 'bg-yellow-500' : 'bg-purple-500'
+                                }`}
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm text-gray-600 w-8 text-right">{count}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-lg border p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    Issue Severity Distribution
+                  </h3>
+                  <div className="space-y-4">
+                    {Object.entries(advancedMetrics.severityDistribution).map(([severity, count]) => {
+                      const total = Object.values(advancedMetrics.severityDistribution).reduce((a, b) => a + b, 0);
+                      const percentage = total > 0 ? (count / total) * 100 : 0;
+                      return (
+                        <div key={severity} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              severity === 'critical' ? 'bg-red-500' :
+                              severity === 'high' ? 'bg-orange-500' :
+                              severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                            }`}></div>
+                            <span className="text-sm font-medium text-gray-700 capitalize">{severity}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${
+                                  severity === 'critical' ? 'bg-red-500' :
+                                  severity === 'high' ? 'bg-orange-500' :
+                                  severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                                }`}
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm text-gray-600 w-8 text-right">{count}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

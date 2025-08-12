@@ -1031,6 +1031,144 @@ export const AccessibilityUtils = {
     return defaultScanner.scanPage(context);
   },
   
+  // Enhanced scan with custom configuration
+  async enhancedScan(config?: Partial<AccessibilityScanConfig>, element?: Element): Promise<AccessibilityResult> {
+    const scanner = new AccessibilityScanner(config);
+    const context = element || document;
+    return scanner.scanPage(context);
+  },
+  
+  // Batch scan multiple elements
+  async batchScan(elements: Element[], config?: Partial<AccessibilityScanConfig>): Promise<AccessibilityResult[]> {
+    const results = [];
+    for (const element of elements) {
+      try {
+        const result = await this.enhancedScan(config, element);
+        results.push(result);
+      } catch (error) {
+        console.error('Failed to scan element:', element, error);
+      }
+    }
+    return results;
+  },
+  
+  // Live accessibility monitoring
+  startLiveMonitoring(callback: (issues: AccessibilityEvaluation[]) => void, interval = 5000): () => void {
+    const monitor = setInterval(async () => {
+      try {
+        const result = await this.quickScan();
+        const issues = result.evaluations.filter(e => e.status === 'fail' && e.severity === 'critical');
+        callback(issues);
+      } catch (error) {
+        console.error('Live monitoring scan failed:', error);
+      }
+    }, interval);
+    
+    return () => clearInterval(monitor);
+  },
+  
+  // Generate accessibility scorecard
+  generateScorecard(results: AccessibilityResult[]): {
+    overallScore: number;
+    principleScores: Record<string, number>;
+    severityBreakdown: Record<string, number>;
+    trendAnalysis: { trend: 'improving' | 'declining' | 'stable'; percentage: number };
+    recommendations: string[];
+  } {
+    if (results.length === 0) {
+      return {
+        overallScore: 0,
+        principleScores: {},
+        severityBreakdown: {},
+        trendAnalysis: { trend: 'stable', percentage: 0 },
+        recommendations: []
+      };
+    }
+    
+    const allEvaluations = results.flatMap(r => r.evaluations);
+    const violations = allEvaluations.filter(e => e.status === 'fail');
+    
+    // Overall score
+    const overallScore = results.reduce((sum, r) => sum + r.overallScore, 0) / results.length;
+    
+    // Principle scores
+    const principleScores: Record<string, number> = {};
+    ['perceivable', 'operable', 'understandable', 'robust'].forEach(principle => {
+      const principleEvaluations = allEvaluations.filter(e => {
+        const guideline = WCAG_GUIDELINES[e.guidelineId];
+        return guideline?.principle === principle;
+      });
+      const passed = principleEvaluations.filter(e => e.status === 'pass').length;
+      principleScores[principle] = principleEvaluations.length > 0 ? (passed / principleEvaluations.length) * 100 : 0;
+    });
+    
+    // Severity breakdown
+    const severityBreakdown: Record<string, number> = {
+      critical: violations.filter(v => v.severity === 'critical').length,
+      high: violations.filter(v => v.severity === 'high').length,
+      medium: violations.filter(v => v.severity === 'medium').length,
+      low: violations.filter(v => v.severity === 'low').length
+    };
+    
+    // Trend analysis
+    let trendAnalysis: { trend: 'improving' | 'declining' | 'stable'; percentage: number };
+    if (results.length < 2) {
+      trendAnalysis = { trend: 'stable', percentage: 0 };
+    } else {
+      const recent = results[0].overallScore;
+      const previous = results[results.length - 1].overallScore;
+      const change = ((recent - previous) / previous) * 100;
+      
+      if (Math.abs(change) < 5) {
+        trendAnalysis = { trend: 'stable', percentage: change };
+      } else if (change > 0) {
+        trendAnalysis = { trend: 'improving', percentage: change };
+      } else {
+        trendAnalysis = { trend: 'declining', percentage: Math.abs(change) };
+      }
+    }
+    
+    // Generate recommendations
+    const recommendations = this.generatePriorityRecommendations(violations).slice(0, 5);
+    
+    return {
+      overallScore,
+      principleScores,
+      severityBreakdown,
+      trendAnalysis,
+      recommendations
+    };
+  },
+  
+  // Generate priority recommendations
+  generatePriorityRecommendations(violations: AccessibilityEvaluation[]): string[] {
+    const recommendationMap = new Map<string, number>();
+    
+    violations.forEach(violation => {
+      const weight = this.getSeverityWeight(violation.severity);
+      violation.recommendations.forEach(rec => {
+        const currentScore = recommendationMap.get(rec) || 0;
+        recommendationMap.set(rec, currentScore + weight);
+      });
+    });
+    
+    return Array.from(recommendationMap.entries())
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([rec]) => rec);
+  },
+  
+  // Utility method to get severity weight
+  getSeverityWeight(severity: string): number {
+    switch (severity) {
+      case 'critical': return 4;
+      case 'high': return 3;
+      case 'medium': return 2;
+      case 'low': return 1;
+      default: return 1;
+    }
+  },
+  
   // Get guidelines by level
   getGuidelinesByLevel(level: 'A' | 'AA' | 'AAA'): AccessibilityGuideline[] {
     return Object.values(WCAG_GUIDELINES).filter(g => 
@@ -1043,5 +1181,99 @@ export const AccessibilityUtils = {
   // Get guidelines by principle
   getGuidelinesByPrinciple(principle: 'perceivable' | 'operable' | 'understandable' | 'robust'): AccessibilityGuideline[] {
     return Object.values(WCAG_GUIDELINES).filter(g => g.principle === principle);
+  },
+  
+  // Validate accessibility results
+  validateResults(results: AccessibilityResult[]): {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  } {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    if (results.length === 0) {
+      warnings.push('No accessibility results provided for validation');
+    }
+    
+    results.forEach((result, index) => {
+      if (!result.participantId) {
+        errors.push(`Result ${index + 1}: Missing participant ID`);
+      }
+      
+      if (!result.evaluations || result.evaluations.length === 0) {
+        warnings.push(`Result ${index + 1}: No evaluations found`);
+      }
+      
+      if (result.overallScore < 0 || result.overallScore > 100) {
+        errors.push(`Result ${index + 1}: Invalid overall score ${result.overallScore}`);
+      }
+      
+      result.evaluations?.forEach((evaluation, evalIndex) => {
+        if (!['pass', 'fail', 'needs-review', 'not-applicable'].includes(evaluation.status)) {
+          errors.push(`Result ${index + 1}, Evaluation ${evalIndex + 1}: Invalid status ${evaluation.status}`);
+        }
+        
+        if (!['low', 'medium', 'high', 'critical'].includes(evaluation.severity)) {
+          errors.push(`Result ${index + 1}, Evaluation ${evalIndex + 1}: Invalid severity ${evaluation.severity}`);
+        }
+      });
+    });
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  },
+  
+  // Export accessibility data
+  exportData(results: AccessibilityResult[], format: 'json' | 'csv' | 'xlsx' = 'json'): string | Blob {
+    switch (format) {
+      case 'json':
+        return JSON.stringify(results, null, 2);
+        
+      case 'csv':
+        const csvHeaders = ['Participant ID', 'Study ID', 'Overall Score', 'Guideline ID', 'Status', 'Severity', 'Findings', 'Recommendations'];
+        const csvRows = [csvHeaders.join(',')];
+        
+        results.forEach(result => {
+          result.evaluations.forEach(evaluation => {
+            const row = [
+              result.participantId,
+              result.studyId.toString(),
+              result.overallScore.toString(),
+              evaluation.guidelineId,
+              evaluation.status,
+              evaluation.severity,
+              `"${evaluation.findings.join('; ')}"`,
+              `"${evaluation.recommendations.join('; ')}"`
+            ];
+            csvRows.push(row.join(','));
+          });
+        });
+        
+        return csvRows.join('\n');
+        
+      case 'xlsx':
+        // For XLSX, return a structured object that can be processed by a spreadsheet library
+        const worksheetData = results.flatMap(result => 
+          result.evaluations.map(evaluation => ({
+            'Participant ID': result.participantId,
+            'Study ID': result.studyId,
+            'Overall Score': result.overallScore,
+            'Guideline ID': evaluation.guidelineId,
+            'Status': evaluation.status,
+            'Severity': evaluation.severity,
+            'Findings': evaluation.findings.join('; '),
+            'Recommendations': evaluation.recommendations.join('; ')
+          }))
+        );
+        
+        return JSON.stringify(worksheetData, null, 2);
+        
+      default:
+        return JSON.stringify(results, null, 2);
+    }
   }
 };

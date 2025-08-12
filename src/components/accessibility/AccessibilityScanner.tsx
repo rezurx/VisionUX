@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Settings, Download, AlertCircle, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { Play, Pause, Settings, Download, AlertCircle, CheckCircle2, Clock, TrendingUp, Shield, Zap, Target, BarChart3, FileText, Calendar } from 'lucide-react';
 import { 
   AccessibilityScanner, 
   AccessibilityScanConfig, 
@@ -9,6 +9,7 @@ import {
   AccessibilityUtils 
 } from '../../utils/accessibility';
 import { AccessibilityResult, AccessibilityEvaluation } from '../../types';
+import { WCAGComplianceFramework } from '../../utils/wcagCompliance';
 
 interface AccessibilityScannerProps {
   studyId?: number;
@@ -50,6 +51,15 @@ const AccessibilityScannerComponent: React.FC<AccessibilityScannerProps> = ({
   const [currentSchedule, setCurrentSchedule] = useState<AccessibilityScheduleConfig | undefined>(scheduleConfig);
   const [showScheduleConfig, setShowScheduleConfig] = useState(false);
   const [prioritizedRecommendations, setPrioritizedRecommendations] = useState<string[]>([]);
+  const [wcagFramework] = useState(() => new WCAGComplianceFramework('2.1', 'AA'));
+  const [realTimeIssues, setRealTimeIssues] = useState<AccessibilityEvaluation[]>([]);
+  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0, phase: '' });
+  const [performanceMetrics, setPerformanceMetrics] = useState({ 
+    scanSpeed: 0, 
+    issueDetectionRate: 0, 
+    accuracy: 0, 
+    coverage: 0 
+  });
   
   const configRef = useRef<HTMLDivElement>(null);
 
@@ -75,24 +85,59 @@ const AccessibilityScannerComponent: React.FC<AccessibilityScannerProps> = ({
     if (isScanning) return;
 
     setIsScanning(true);
+    setScanProgress({ current: 0, total: 100, phase: 'Initializing scan...' });
+    
     try {
+      // Enhanced scanning with progress tracking
+      setScanProgress({ current: 10, total: 100, phase: 'Configuring axe-core...' });
+      
+      setScanProgress({ current: 30, total: 100, phase: 'Scanning DOM structure...' });
+      
+      const startTime = performance.now();
       const result = await scanner.scanPage();
+      const endTime = performance.now();
+      
       result.studyId = studyId || 0;
+      
+      setScanProgress({ current: 70, total: 100, phase: 'Processing results...' });
+      
+      // Calculate performance metrics
+      const scanDuration = endTime - startTime;
+      const issueCount = result.evaluations.filter(e => e.status === 'fail').length;
+      const totalElements = document.querySelectorAll('*').length;
+      
+      setPerformanceMetrics({
+        scanSpeed: Math.round(totalElements / (scanDuration / 1000)), // elements per second
+        issueDetectionRate: Math.round((issueCount / totalElements) * 100 * 100) / 100,
+        accuracy: result.overallScore,
+        coverage: Math.round((result.evaluations.length / Object.keys(AccessibilityUtils.guidelines).length) * 100)
+      });
+      
+      setScanProgress({ current: 85, total: 100, phase: 'Generating compliance analysis...' });
       
       setScanResults(result);
       setScanHistory(prev => [result, ...prev.slice(0, 9)]); // Keep last 10 scans
       
-      // Generate compliance report from current results
+      // Generate enhanced compliance report
       const allResults = [result, ...scanHistory];
       const report = scanner.generateComplianceReport(allResults);
       setComplianceReport(report);
       
+      // Extract real-time issues for monitoring
+      const criticalIssues = result.evaluations.filter(e => e.status === 'fail' && e.severity === 'critical');
+      setRealTimeIssues(criticalIssues);
+      
+      setScanProgress({ current: 100, total: 100, phase: 'Scan complete!' });
+      
       onScanComplete?.(result);
     } catch (error) {
       console.error('Accessibility scan failed:', error);
-      // TODO: Show error notification
+      setScanProgress({ current: 100, total: 100, phase: 'Scan failed - check console for details' });
     } finally {
-      setIsScanning(false);
+      setTimeout(() => {
+        setIsScanning(false);
+        setScanProgress({ current: 0, total: 0, phase: '' });
+      }, 2000);
     }
   };
 
@@ -250,6 +295,70 @@ const AccessibilityScannerComponent: React.FC<AccessibilityScannerProps> = ({
             )}
           </div>
         </div>
+
+        {/* Performance Metrics */}
+        {performanceMetrics.scanSpeed > 0 && (
+          <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-medium text-blue-700">Speed</span>
+              </div>
+              <div className="text-sm font-bold text-blue-900">
+                {performanceMetrics.scanSpeed.toLocaleString()} el/s
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Target className="w-4 h-4 text-orange-600" />
+                <span className="text-xs font-medium text-orange-700">Detection Rate</span>
+              </div>
+              <div className="text-sm font-bold text-orange-900">
+                {performanceMetrics.issueDetectionRate}%
+              </div>
+            </div>
+            
+            <div className="bg-green-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-4 h-4 text-green-600" />
+                <span className="text-xs font-medium text-green-700">Accuracy</span>
+              </div>
+              <div className="text-sm font-bold text-green-900">
+                {performanceMetrics.accuracy.toFixed(1)}%
+              </div>
+            </div>
+            
+            <div className="bg-purple-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <BarChart3 className="w-4 h-4 text-purple-600" />
+                <span className="text-xs font-medium text-purple-700">Coverage</span>
+              </div>
+              <div className="text-sm font-bold text-purple-900">
+                {performanceMetrics.coverage}%
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Real-time Issues Alert */}
+        {realTimeIssues.length > 0 && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-medium text-red-800">
+                {realTimeIssues.length} Critical Issues Detected
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {realTimeIssues.slice(0, 4).map((issue, index) => (
+                <div key={index} className="text-xs text-red-700 bg-white rounded px-2 py-1 border border-red-100">
+                  {issue.guidelineId}: {issue.findings[0]?.substring(0, 50)}...
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Monitoring Status */}
         {isMonitoring && monitoringStatus && (
@@ -438,6 +547,22 @@ const AccessibilityScannerComponent: React.FC<AccessibilityScannerProps> = ({
 
       {/* Scan Controls */}
       <div className="p-4 border-b">
+        {/* Progress Indicator */}
+        {isScanning && scanProgress.total > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">{scanProgress.phase}</span>
+              <span className="text-sm text-gray-500">{scanProgress.current}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${scanProgress.current}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <button
             onClick={handleStartScan}
@@ -452,10 +577,23 @@ const AccessibilityScannerComponent: React.FC<AccessibilityScannerProps> = ({
             ) : (
               <>
                 <Play className="w-4 h-4 mr-2" />
-                Start Scan
+                Enhanced Scan
               </>
             )}
           </button>
+          
+          {scanResults && (
+            <button
+              onClick={() => {
+                const complianceLevel = wcagFramework.assessComplianceLevel([scanResults]);
+                console.log('WCAG Compliance Level:', complianceLevel);
+              }}
+              className="inline-flex items-center px-3 py-2 text-sm border border-green-300 text-green-700 bg-green-50 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            >
+              <Shield className="w-4 h-4 mr-1" />
+              Check Compliance
+            </button>
+          )}
           
           <div className="w-px h-6 bg-gray-300 mx-2"></div>
           

@@ -24,6 +24,7 @@ import { AccessibilityAuditCreator, AccessibilityDashboard } from './components/
 import SurveyBuilder from './components/survey/SurveyBuilder';
 import ParticipantSurvey from './components/participant/ParticipantSurvey';
 import SurveyAnalytics from './components/analytics/SurveyAnalytics';
+import DesignSystemMetrics from './components/analytics/DesignSystemMetrics';
 
 const IAEvaluationPlatform = () => {
   // Check if we're in participant mode via URL parameters
@@ -301,6 +302,23 @@ const IAEvaluationPlatform = () => {
           }
         } as SurveyConfig;
         
+      case 'design-system-review':
+        return {
+          methodType: 'design-system-review',
+          version: '1.0',
+          reviewScope: ['components', 'tokens', 'patterns'],
+          evaluationCriteria: {
+            usability: true,
+            consistency: true,
+            accessibility: true,
+            performance: false,
+            documentation: true
+          },
+          componentCategories: ['atoms', 'molecules', 'organisms'],
+          includeBrandCompliance: false,
+          generateRecommendations: true
+        } as any;
+        
       default:
         return {
           methodType,
@@ -309,6 +327,7 @@ const IAEvaluationPlatform = () => {
     }
   };
 
+  // Enhanced result state management for multi-method platform
   const [studyResults, setStudyResults] = useState<any>({
     'P001-demo': {
       participantId: 'P001-demo',
@@ -469,6 +488,11 @@ const IAEvaluationPlatform = () => {
     }
   });
 
+  // Additional result state for multi-method research platform
+  const [surveyResults, setSurveyResults] = useState<any[]>([]);
+  const [accessibilityResults, setAccessibilityResults] = useState<any[]>([]);
+  const [designSystemResults, setDesignSystemResults] = useState<any[]>([]);
+
   const exportAllData = () => {
     if (Object.keys(studyResults).length === 0) {
       const sampleData = [
@@ -504,8 +528,35 @@ const IAEvaluationPlatform = () => {
       duration_seconds: Math.round((result.totalDuration || result.duration) / 1000)
     }));
 
+    // Export comprehensive multi-method data
+    const exportData = {
+      participants: allParticipants,
+      surveys: surveyResults,
+      accessibility: accessibilityResults,
+      designSystem: designSystemResults,
+      metadata: {
+        exportDate: new Date().toISOString(),
+        totalParticipants: allParticipants.length,
+        methodTypes: [...new Set(allParticipants.map(p => p.studyType))],
+        exportVersion: '2.0.0'
+      }
+    };
+
+    // Generate CSV for participants (backward compatibility)
     generateCSV(allParticipants, 'all_participants_summary.csv');
-    alert('Complete dataset exported!');
+    
+    // Generate JSON for comprehensive data
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vision_ux_comprehensive_data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert('Complete multi-method dataset exported! (CSV + JSON)');
   };
 
   const exportStudyData = (study: any) => {
@@ -698,6 +749,32 @@ const IAEvaluationPlatform = () => {
                     <div>
                       <div className="font-medium text-gray-900">Accessibility Dashboard</div>
                       <div className="text-xs text-gray-500">View audit results & analytics</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentView('design-system-analytics');
+                      setShowMethodSelector(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 rounded flex items-center space-x-2 group"
+                  >
+                    <Layers className="w-4 h-4 text-purple-500 group-hover:text-purple-600" />
+                    <div>
+                      <div className="font-medium text-gray-900">Design System Analytics</div>
+                      <div className="text-xs text-gray-500">Component adoption & usage metrics</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentView('survey-builder');
+                      setShowMethodSelector(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded flex items-center space-x-2 group"
+                  >
+                    <FileText className="w-4 h-4 text-indigo-500 group-hover:text-indigo-600" />
+                    <div>
+                      <div className="font-medium text-gray-900">Survey Builder</div>
+                      <div className="text-xs text-gray-500">Create advanced surveys with logic</div>
                     </div>
                   </button>
                 </div>
@@ -2443,7 +2520,37 @@ const IAEvaluationPlatform = () => {
       case 'participants':
         return <ParticipantsView />;
       case 'analytics':
-        return <AnalyticsDashboard studies={studies} studyResults={studyResults} />;
+        try {
+          return (
+            <AnalyticsDashboard 
+              studies={studies} 
+              studyResults={studyResults}
+              surveyResults={surveyResults}
+              accessibilityResults={accessibilityResults}
+              designSystemResults={designSystemResults}
+              enableMultiMethod={true}
+            />
+          );
+        } catch (error) {
+          console.error('Error rendering Analytics Dashboard:', error);
+          return (
+            <div className="h-full bg-white p-8">
+              <div className="text-center">
+                <h1 className="text-xl font-semibold text-gray-900 mb-4">Analytics Dashboard</h1>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <p className="text-red-800 font-medium mb-2">Error Loading Analytics</p>
+                  <p className="text-red-600 text-sm">Unable to load analytics dashboard. Please try refreshing the page.</p>
+                  <button
+                    onClick={() => setCurrentView('dashboard')}
+                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Back to Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
       case 'create-study':
         return <CreateStudy />;
       case 'study-settings':
@@ -2559,6 +2666,57 @@ const IAEvaluationPlatform = () => {
             enableAllFeatures={true}
           />
         );
+      case 'design-system-analytics':
+        try {
+          return (
+            <div className="h-full bg-white">
+              <div className="p-4 border-b border-gray-200">
+                <div className="max-w-6xl mx-auto flex items-center justify-between">
+                  <div>
+                    <h1 className="text-xl font-semibold">Design System Analytics</h1>
+                    <p className="text-gray-600">
+                      {selectedStudy?.name || 'Component Adoption & Usage Metrics'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setCurrentView('studies')}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Back to Studies
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 max-w-6xl mx-auto">
+                <DesignSystemMetrics
+                  designSystemResults={designSystemResults}
+                  components={[]}
+                  width={Math.min(1200, window.innerWidth - 100)}
+                  height={800}
+                  responsive={true}
+                />
+              </div>
+            </div>
+          );
+        } catch (error) {
+          console.error('Error rendering Design System Analytics:', error);
+          return (
+            <div className="h-full bg-white p-8">
+              <div className="text-center">
+                <h1 className="text-xl font-semibold text-gray-900 mb-4">Design System Analytics</h1>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <p className="text-red-800 font-medium mb-2">Error Loading Component</p>
+                  <p className="text-red-600 text-sm">Unable to load design system analytics. Please try refreshing the page.</p>
+                  <button
+                    onClick={() => setCurrentView('studies')}
+                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Back to Studies
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
       default:
         return <Dashboard />;
     }
