@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Users, Download, FileText, TreePine, Layers, Clock, Target, Settings, Play, Trash2, Save, X, Link, BarChart3, Filter, Search, Grid, List } from 'lucide-react';
+import { Plus, Users, Download, FileText, TreePine, Layers, Clock, Target, Settings, Play, Trash2, Save, X, Link, BarChart3, Filter, Search, Grid, List, Zap } from 'lucide-react';
 import { 
   Study, 
   StudyStatus, 
@@ -25,6 +25,7 @@ import SurveyBuilder from './components/survey/SurveyBuilder';
 import ParticipantSurvey from './components/participant/ParticipantSurvey';
 import SurveyAnalytics from './components/analytics/SurveyAnalytics';
 import DesignSystemMetrics from './components/analytics/DesignSystemMetrics';
+import PerformanceTestRunner from './components/test/PerformanceTestRunner';
 
 const IAEvaluationPlatform = () => {
   // Check if we're in participant mode via URL parameters
@@ -668,6 +669,17 @@ const IAEvaluationPlatform = () => {
             >
               Analytics
             </button>
+            <button 
+              onClick={() => setCurrentView('performance')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                currentView === 'performance' 
+                  ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+              aria-label="Go to Performance Testing"
+            >
+              Performance
+            </button>
             <div className="border-l border-gray-200 pl-6 ml-2">
               <span className="text-xs text-gray-400 uppercase tracking-wider mr-4 font-medium">Demo</span>
               <button 
@@ -839,6 +851,16 @@ const IAEvaluationPlatform = () => {
               }`}
             >
               Analytics
+            </button>
+            <button 
+              onClick={() => { setCurrentView('performance'); setMobileMenuOpen(false); }}
+              className={`block w-full text-left px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 ${
+                currentView === 'performance' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              Performance
             </button>
             <div className="border-t border-gray-200 my-4 pt-4">
               <p className="px-4 text-xs text-gray-400 uppercase tracking-wider mb-2 font-medium">Demo</p>
@@ -2551,6 +2573,26 @@ const IAEvaluationPlatform = () => {
             </div>
           );
         }
+      case 'performance':
+        return (
+          <div className="h-full bg-gray-50">
+            <div className="bg-white shadow-sm p-4 border-b border-gray-200">
+              <div className="max-w-6xl mx-auto">
+                <h1 className="text-xl font-semibold">Performance Testing - Phase 1 Validation</h1>
+                <p className="text-gray-600 text-sm mt-1">Comprehensive performance testing for production readiness</p>
+              </div>
+            </div>
+            <div className="max-w-6xl mx-auto p-6">
+              <PerformanceTestRunner 
+                autoRun={false}
+                onTestComplete={(report) => {
+                  console.log('Performance test completed:', report);
+                  // Optional: Save report or trigger additional actions
+                }}
+              />
+            </div>
+          </div>
+        );
       case 'create-study':
         return <CreateStudy />;
       case 'study-settings':
