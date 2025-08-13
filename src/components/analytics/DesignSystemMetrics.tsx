@@ -4,6 +4,27 @@ import { DesignSystemResult, DesignSystemComponent, AnalyticsMetadata, Component
 import { PerformanceOptimizer, StatisticalAnalysis } from '../../analytics';
 import { Download, TrendingUp, BarChart3, Users, Clock, Target, AlertTriangle, CheckCircle } from 'lucide-react';
 
+interface NetworkNode extends d3.SimulationNodeDatum {
+  id: string;
+  name: string;
+  size: number;
+  color: string;
+}
+
+interface NetworkLink extends d3.SimulationLinkDatum<NetworkNode> {
+  source: string | NetworkNode;
+  target: string | NetworkNode;
+  value?: number;
+}
+
+interface HierarchyData {
+  id?: string;
+  name?: string;
+  usage?: number;
+  category?: string;
+  children?: HierarchyData[];
+}
+
 interface DesignSystemMetricsProps {
   designSystemResults: DesignSystemResult[];
   components: DesignSystemComponent[];
@@ -202,8 +223,8 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
     return dates;
   };
   
-  const generateNetworkVisualization = (components: DesignSystemComponent[]) => {
-    const nodes = components.slice(0, 15).map(component => ({
+  const generateNetworkVisualization = (components: DesignSystemComponent[]): { nodes: NetworkNode[]; links: NetworkLink[] } => {
+    const nodes: NetworkNode[] = components.slice(0, 15).map(component => ({
       id: component.id,
       name: component.name,
       size: Math.sqrt(component.usage.frequency) * 0.5 + 5,
@@ -212,7 +233,7 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
              component.status === 'deprecated' ? '#EF4444' : '#8B5CF6'
     }));
     
-    const links = [];
+    const links: NetworkLink[] = [];
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         if (Math.random() > 0.7) {
@@ -255,7 +276,7 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
       .domain([0, d3.max(timelineData, d => d.adoptionRate) || 100])
       .range([chartHeight - 50, 50]);
       
-    const line = d3.line<any>()
+    const line = d3.line<{ date: string; adoptionRate: number; }>()
       .x(d => xScale(parseTime(d.date)!))
       .y(d => yScale(d.adoptionRate))
       .curve(d3.curveMonotoneX);
@@ -272,7 +293,7 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
       .attr('fill', 'none')
       .attr('stroke', '#3b82f6')
       .attr('stroke-width', 3)
-      .attr('d', line)
+      .attr('d', line(timelineData))
       .style('opacity', 0)
       .transition()
       .duration(2000)
@@ -303,8 +324,8 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
     const integrationData = calculateIntegrationMetrics(data);
     const networkData = generateNetworkVisualization(data.components);
     
-    const simulation = d3.forceSimulation(networkData.nodes)
-      .force('link', d3.forceLink(networkData.links).id((d: any) => d.id).distance(60))
+    const simulation = d3.forceSimulation<NetworkNode>(networkData.nodes)
+      .force('link', d3.forceLink<NetworkNode, NetworkLink>(networkData.links).id(d => d.id).distance(60))
       .force('charge', d3.forceManyBody().strength(-150))
       .force('center', d3.forceCenter(chartWidth / 2, chartHeight / 2));
     
@@ -320,8 +341,8 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
       .selectAll('circle')
       .data(networkData.nodes)
       .enter().append('circle')
-      .attr('r', (d: any) => d.size || 8)
-      .style('fill', (d: any) => d.color || '#69b3a2')
+      .attr('r', (d: NetworkNode) => d.size || 8)
+      .style('fill', (d: NetworkNode) => d.color || '#69b3a2')
       .style('stroke', '#fff')
       .style('stroke-width', 2);
     
@@ -425,7 +446,7 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
         documentation: 1 + Math.random() * 4,
         accessibility: 1 + Math.random() * 4,
         feedback: ['Great component', 'Needs improvement', 'Very intuitive', 'Could be better documented'][Math.floor(Math.random() * 4)],
-        improvementSuggestions: ['Better documentation', 'More examples', 'Improved accessibility'][Math.floor(Math.random() * 3)]
+        improvementSuggestions: [['Better documentation', 'More examples', 'Improved accessibility'][Math.floor(Math.random() * 3)]]
       })),
       overallSatisfaction: 1 + Math.random() * 4,
       adoptionMetrics: {
@@ -801,7 +822,8 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
       .padding(2)
       .round(true);
 
-    const hierarchy = d3.hierarchy({ children: usageData })
+    const hierarchyData: HierarchyData = { children: usageData };
+    const hierarchy = d3.hierarchy<HierarchyData>(hierarchyData)
       .sum(d => d.usage || 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
@@ -813,22 +835,22 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
       .data(hierarchy.leaves())
       .enter().append('g')
       .attr('class', 'usage-cell')
-      .attr('transform', d => `translate(${d.x0},${d.y0})`);
+      .attr('transform', d => `translate(${(d as any).x0},${(d as any).y0})`);
 
     cells.append('rect')
-      .attr('width', d => d.x1 - d.x0)
-      .attr('height', d => d.y1 - d.y0)
+      .attr('width', d => (d as any).x1 - (d as any).x0)
+      .attr('height', d => (d as any).y1 - (d as any).y0)
       .style('fill', (d, i) => colorScale(i.toString()))
       .style('opacity', 0.8)
       .style('stroke', '#fff')
       .style('stroke-width', 1);
 
     cells.append('text')
-      .attr('x', d => (d.x1 - d.x0) / 2)
-      .attr('y', d => (d.y1 - d.y0) / 2)
+      .attr('x', d => ((d as any).x1 - (d as any).x0) / 2)
+      .attr('y', d => ((d as any).y1 - (d as any).y0) / 2)
       .attr('dy', '0.35em')
       .style('text-anchor', 'middle')
-      .style('font-size', d => Math.min((d.x1 - d.x0) / 8, (d.y1 - d.y0) / 4, 12))
+      .style('font-size', d => Math.min(((d as any).x1 - (d as any).x0) / 8, ((d as any).y1 - (d as any).y0) / 4, 12))
       .style('font-weight', 'bold')
       .style('fill', '#fff')
       .text(d => d.data.name);
@@ -944,7 +966,7 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
   const calculateAdoptionMetrics = (data: { designSystemResults: DesignSystemResult[]; components: DesignSystemComponent[] }) => {
     return data.components.map(component => {
       const evaluations = data.designSystemResults.flatMap(result =>
-        result.componentEvaluations.filter(eval => eval.componentId === component.id)
+        result.componentEvaluations.filter(evaluation => evaluation.componentId === component.id)
       );
 
       const adoptionRate = data.designSystemResults.length > 0 ? 
@@ -972,18 +994,18 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
   const calculateSatisfactionMetrics = (data: { designSystemResults: DesignSystemResult[]; components: DesignSystemComponent[] }) => {
     return data.components.map(component => {
       const evaluations = data.designSystemResults.flatMap(result =>
-        result.componentEvaluations.filter(eval => eval.componentId === component.id)
+        result.componentEvaluations.filter(evaluation => evaluation.componentId === component.id)
       );
 
       const scores = {
         usability: evaluations.length > 0 ? 
-          evaluations.reduce((sum, eval) => sum + eval.usability, 0) / evaluations.length : 0,
+          evaluations.reduce((sum, evaluation) => sum + evaluation.usability, 0) / evaluations.length : 0,
         consistency: evaluations.length > 0 ? 
-          evaluations.reduce((sum, eval) => sum + eval.consistency, 0) / evaluations.length : 0,
+          evaluations.reduce((sum, evaluation) => sum + evaluation.consistency, 0) / evaluations.length : 0,
         documentation: evaluations.length > 0 ? 
-          evaluations.reduce((sum, eval) => sum + eval.documentation, 0) / evaluations.length : 0,
+          evaluations.reduce((sum, evaluation) => sum + evaluation.documentation, 0) / evaluations.length : 0,
         accessibility: evaluations.length > 0 ? 
-          evaluations.reduce((sum, eval) => sum + eval.accessibility, 0) / evaluations.length : 0
+          evaluations.reduce((sum, evaluation) => sum + evaluation.accessibility, 0) / evaluations.length : 0
       };
 
       return {
@@ -1008,7 +1030,7 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
     const totalComponents = data.components.length;
     const evaluatedComponents = new Set(
       data.designSystemResults.flatMap(result => 
-        result.componentEvaluations.map(eval => eval.componentId)
+        result.componentEvaluations.map(evaluation => evaluation.componentId)
       )
     ).size;
 
@@ -1019,10 +1041,10 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
       data.designSystemResults.reduce((sum, result) => sum + result.overallSatisfaction, 0) / data.designSystemResults.length : 0;
 
     const consistency = allEvaluations.length > 0 ?
-      allEvaluations.reduce((sum, eval) => sum + eval.consistency, 0) / allEvaluations.length / 5 * 100 : 0;
+      allEvaluations.reduce((sum, evaluation) => sum + evaluation.consistency, 0) / allEvaluations.length / 5 * 100 : 0;
 
     const accessibility = allEvaluations.length > 0 ?
-      allEvaluations.reduce((sum, eval) => sum + eval.accessibility, 0) / allEvaluations.length / 5 * 100 : 0;
+      allEvaluations.reduce((sum, evaluation) => sum + evaluation.accessibility, 0) / allEvaluations.length / 5 * 100 : 0;
 
     return { coverage, satisfaction, consistency, accessibility };
   };

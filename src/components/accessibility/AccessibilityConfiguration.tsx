@@ -315,10 +315,10 @@ const AccessibilityConfiguration: React.FC<AccessibilityConfigurationProps> = ({
       <div className="border-b">
         <nav className="flex space-x-8 px-4">
           {[
-            { key: 'basic', label: 'Basic Settings', icon: Settings },
-            { key: 'scope', label: 'Testing Scope', icon: Shield },
-            { key: 'methods', label: 'Evaluation Methods', icon: Users },
-            { key: 'reporting', label: 'Reporting Options', icon: Settings },
+            { key: 'basic' as const, label: 'Basic Settings', icon: Settings },
+            { key: 'scope' as const, label: 'Testing Scope', icon: Shield },
+            { key: 'methods' as const, label: 'Evaluation Methods', icon: Users },
+            { key: 'reporting' as const, label: 'Reporting Options', icon: Settings },
             ...(enableAdvancedOptions ? [{ key: 'advanced' as const, label: 'Advanced', icon: Settings }] : [])
           ].map(tab => (
             <button

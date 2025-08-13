@@ -32,18 +32,19 @@ const AccessibilityScannerComponent: React.FC<AccessibilityScannerProps> = ({
   scheduleConfig,
   onScheduleChange
 }) => {
-  const [scanner] = useState(() => new AccessibilityScanner(initialConfig));
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResults, setScanResults] = useState<AccessibilityResult | null>(null);
-  const [complianceReport, setComplianceReport] = useState<AccessibilityComplianceReport | null>(null);
-  const [config, setConfig] = useState<AccessibilityScanConfig>({
+  const fullInitialConfig: AccessibilityScanConfig = {
     wcagLevel: 'AA',
     timeout: 30000,
     allowFailedFrames: true,
     reporter: 'v2',
     resultTypes: ['violations', 'incomplete', 'passes'],
     ...initialConfig
-  });
+  };
+  const [scanner] = useState(() => new AccessibilityScanner(fullInitialConfig));
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<AccessibilityResult | null>(null);
+  const [complianceReport, setComplianceReport] = useState<AccessibilityComplianceReport | null>(null);
+  const [config, setConfig] = useState<AccessibilityScanConfig>(fullInitialConfig);
   const [showConfig, setShowConfig] = useState(false);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [monitoringStatus, setMonitoringStatus] = useState(scanner.getMonitoringStatus());

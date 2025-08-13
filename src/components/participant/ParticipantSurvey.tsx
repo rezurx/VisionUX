@@ -9,7 +9,7 @@ import {
   Star,
   ArrowUp,
   ArrowDown,
-  Move3D,
+  Move3d,
   Eye,
   Save,
   X
@@ -515,7 +515,7 @@ const ParticipantSurvey: React.FC<ParticipantSurveyProps> = ({
                       className="w-full p-3 border border-gray-300 rounded-lg text-left hover:border-blue-300 hover:bg-blue-50 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
-                        <Move3D className="w-4 h-4 text-gray-400" />
+                        <Move3d className="w-4 h-4 text-gray-400" />
                         <span>{option.text}</span>
                       </div>
                     </button>

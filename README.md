@@ -97,6 +97,22 @@ npm run build
 npm run preview
 ```
 
+### **Quick Issue Fixes** 🚑
+
+```bash
+# Fix blank screen (most common)
+npm install lucide-react@latest
+npm run dev
+
+# Fix TypeScript errors
+npm install @types/axe-core
+npx tsc --noEmit
+
+# Reset everything  
+rm -rf node_modules package-lock.json
+npm install
+```
+
 ## 📖 Usage Guide
 
 ### **Creating Studies**
@@ -186,6 +202,15 @@ src/
 - 🔮 Automated report generation
 - 🔮 Predictive user behavior analysis
 - 🔮 Voice and conversational UX testing
+
+## 🔧 Troubleshooting
+
+**Experiencing issues?** Check our comprehensive [**Troubleshooting Guide**](TROUBLESHOOTING.md) for solutions to common problems:
+
+- 🚨 **Blank/White Screen Issues** - CSP violations, icon import errors
+- 🔨 **TypeScript Compilation Errors** - Missing dependencies, type issues  
+- ⚙️ **Development Server Problems** - Port conflicts, build failures
+- 📱 **Component Structure Errors** - Missing closures, reserved words
 
 ## 🤝 Contributing
 

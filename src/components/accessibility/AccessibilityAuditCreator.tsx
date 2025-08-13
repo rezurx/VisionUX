@@ -46,7 +46,7 @@ const AccessibilityAuditCreator: React.FC<AccessibilityAuditCreatorProps> = ({
   const [minParticipants, setMinParticipants] = useState(initialStudyData?.configuration?.minParticipants || 3);
   const [requiresCode, setRequiresCode] = useState(initialStudyData?.configuration?.requiresCode || false);
   const [accessCode, setAccessCode] = useState(initialStudyData?.configuration?.accessCode || '');
-  const [collectDemographics, setCollectDemographics] = useState(initialStudyData?.configuration?.collectDemographics || true);
+  const [collectDemographics, setCollectDemographics] = useState<boolean>(initialStudyData?.configuration?.collectDemographics ?? true);
 
   // Advanced scheduling configuration
   const [enableScheduling, setEnableScheduling] = useState(false);

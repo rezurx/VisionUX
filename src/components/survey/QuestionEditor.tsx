@@ -10,7 +10,7 @@ import {
   Settings2,
   ChevronUp,
   ChevronDown,
-  Move3D,
+  Move3d,
   Eye,
   EyeOff,
   AlertCircle,
@@ -213,7 +213,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
         return {
           title: 'Ranking Question',
           description: 'Participants rank options in order of preference',
-          icon: <Move3D className="w-5 h-5" />
+          icon: <Move3d className="w-5 h-5" />
         };
       default:
         return {
@@ -408,7 +408,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   <div className="space-y-2">
                     {question.options?.map((option, index) => (
                       <div key={option.id} className="flex items-center space-x-2 p-3 bg-white rounded-lg border border-gray-200">
-                        <Move3D className="w-4 h-4 text-gray-400 cursor-move" />
+                        <Move3d className="w-4 h-4 text-gray-400 cursor-move" />
                         <input
                           type="text"
                           value={option.text}

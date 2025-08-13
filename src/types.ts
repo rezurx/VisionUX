@@ -20,6 +20,7 @@ export type ResearchMethodType =
   | 'a-b-testing'
   | 'moderated-testing'
   | 'unmoderated-testing'
+  | 'your-new-method'
   | 'cognitive-walkthrough'
   | 'heuristic-evaluation'
   | 'diary-study'
@@ -1017,6 +1018,21 @@ export const RESEARCH_METHOD_METADATA: Record<ResearchMethodType, ResearchMethod
     dataTypes: ['navigation-patterns', 'conversion-funnels', 'user-journeys'],
     compatibleMethods: ['a-b-testing', 'usability-testing', 'diary-study'],
     prerequisites: ['analytics-tracking', 'sufficient-traffic', 'data-privacy-compliance']
+  },
+  'your-new-method': {
+    type: 'your-new-method',
+    category: 'user-research',
+    complexity: 'moderate',
+    estimatedDuration: { min: 30, max: 90, average: 60 },
+    participantRequirements: { 
+      minParticipants: 5, 
+      maxParticipants: 20, 
+      recommendedParticipants: 10,
+      skillLevel: 'any' 
+    },
+    dataTypes: ['custom-data', 'user-feedback'],
+    compatibleMethods: ['survey', 'user-interview'],
+    prerequisites: ['method-definition', 'participant-instructions']
   }
 };
 
@@ -1224,6 +1240,9 @@ export interface AccessibilityResult {
   evaluations: AccessibilityEvaluation[];
   overallScore: number;
   completionTime: number;
+  startTime?: Date;
+  endTime?: Date;
+  duration?: number;
   assistiveTechnology?: string;
 }
 
@@ -1549,7 +1568,7 @@ export interface AnalyticsData {
 
 export interface ChartConfig {
   id: string;
-  type: 'bar' | 'line' | 'pie' | 'scatter' | 'heatmap' | 'tree' | 'network';
+  type: 'bar' | 'line' | 'pie' | 'scatter' | 'heatmap' | 'tree' | 'network' | 'histogram';
   title: string;
   data: any;
   options?: any;

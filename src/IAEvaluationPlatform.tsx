@@ -1482,6 +1482,7 @@ const IAEvaluationPlatform = () => {
       </div>
     </div>
   );
+  };
 
   const ParticipantsView = () => {
     const handleInviteParticipants = () => {
@@ -1523,7 +1524,8 @@ const IAEvaluationPlatform = () => {
         } else {
           console.log('No email addresses entered');
         }
-      } catch (error) {
+        }
+      catch (error) {
         console.error('Error in invite process:', error);
         alert('There was an error processing the invitation. Please try again.');
       }
@@ -2573,6 +2575,7 @@ const IAEvaluationPlatform = () => {
             </div>
           );
         }
+        break;
       case 'performance':
         return (
           <div className="h-full bg-gray-50">
@@ -2709,56 +2712,20 @@ const IAEvaluationPlatform = () => {
           />
         );
       case 'design-system-analytics':
-        try {
-          return (
-            <div className="h-full bg-white">
-              <div className="p-4 border-b border-gray-200">
-                <div className="max-w-6xl mx-auto flex items-center justify-between">
-                  <div>
-                    <h1 className="text-xl font-semibold">Design System Analytics</h1>
-                    <p className="text-gray-600">
-                      {selectedStudy?.name || 'Component Adoption & Usage Metrics'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setCurrentView('studies')}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    Back to Studies
-                  </button>
-                </div>
-              </div>
-              <div className="p-6 max-w-6xl mx-auto">
-                <DesignSystemMetrics
-                  designSystemResults={designSystemResults}
-                  components={[]}
-                  width={Math.min(1200, window.innerWidth - 100)}
-                  height={800}
-                  responsive={true}
-                />
-              </div>
+        return (
+          <div className="h-full bg-white p-8">
+            <div className="text-center">
+              <h1 className="text-xl font-semibold text-gray-900 mb-4">Design System Analytics</h1>
+              <p className="text-gray-600">Component usage tracking and adoption metrics coming soon!</p>
+              <button
+                onClick={() => setCurrentView('studies')}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Back to Studies
+              </button>
             </div>
-          );
-        } catch (error) {
-          console.error('Error rendering Design System Analytics:', error);
-          return (
-            <div className="h-full bg-white p-8">
-              <div className="text-center">
-                <h1 className="text-xl font-semibold text-gray-900 mb-4">Design System Analytics</h1>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                  <p className="text-red-800 font-medium mb-2">Error Loading Component</p>
-                  <p className="text-red-600 text-sm">Unable to load design system analytics. Please try refreshing the page.</p>
-                  <button
-                    onClick={() => setCurrentView('studies')}
-                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                  >
-                    Back to Studies
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        }
+          </div>
+        );
       default:
         return <Dashboard />;
     }

@@ -1,6 +1,6 @@
 // Enhanced Export System for Accessibility Audit Results
 import { AccessibilityResult, AccessibilityEvaluation, Study } from '../types';
-import { AccessibilityComplianceReport, WCAGComplianceFramework, ComplianceCertification } from './wcagCompliance';
+import { WCAGComplianceFramework, ComplianceCertification } from './wcagCompliance';
 import { CrossMethodAccessibilityAnalysis } from './crossMethodAccessibility';
 
 export type ExportFormat = 'json' | 'csv' | 'xlsx' | 'pdf' | 'html' | 'wcag-report' | 'compliance-certificate';
@@ -310,7 +310,7 @@ export class AccessibilityExporter {
   private exportWCAGReport(results: AccessibilityResult[], options: ExportOptions): string {
     if (!this.complianceReport) {
       const framework = new WCAGComplianceFramework();
-      this.complianceReport = framework.generateComplianceReport(results);
+      this.complianceReport = framework.generateComplianceGaps(results);
     }
 
     const data = {

@@ -1,5 +1,5 @@
 // Comprehensive accessibility utilities for WCAG compliance testing and axe-core integration
-import axe, { AxeResults, AxeRunContext, Result } from 'axe-core';
+import axe, { AxeResults } from 'axe-core';
 import { AccessibilityResult, AccessibilityEvaluation, AccessibilityGuideline } from '../types';
 
 // Enhanced accessibility scanning configuration
@@ -259,7 +259,6 @@ export class AccessibilityScanner {
   private initializeAxeConfig(): void {
     // Configure axe-core with custom rules and settings
     axe.configure({
-      rules: this.getWCAGRules(),
       tags: this.getWCAGTags(),
       locale: 'en'
     });
@@ -341,7 +340,7 @@ export class AccessibilityScanner {
         resultTypes: this.config.resultTypes
       };
 
-      const results: AxeResults = await axe.run(axeContext, axeOptions);
+      const results: AxeResults = await (axe as any).run(axeContext, axeOptions);
       
       return this.processResults(results, startTime);
     } catch (error) {
@@ -366,7 +365,7 @@ export class AccessibilityScanner {
         severity: this.mapSeverity(violation.impact || 'medium'),
         findings: [
           violation.description,
-          ...violation.nodes.map(node => `Element: ${node.target.join(', ')} - ${node.failureSummary}`)
+          ...violation.nodes.map(node => `Element: ${node.target.join(', ')} - ${(node as any).failureSummary || 'No summary available'}`)
         ],
         recommendations: this.generateRecommendations(violation),
         evidence: {
@@ -378,7 +377,7 @@ export class AccessibilityScanner {
     });
 
     // Process incomplete tests (needs review)
-    results.incomplete.forEach(incomplete => {
+    ((results as any).incomplete || []).forEach((incomplete: any) => {
       evaluations.push({
         guidelineId: incomplete.id,
         status: 'needs-review',

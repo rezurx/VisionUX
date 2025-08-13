@@ -299,20 +299,21 @@ const AccessibilityIssueDetector: React.FC<AccessibilityIssueDetectorProps> = ({
 
   const handleIssueClick = (issue: DetectedIssue) => {
     setSelectedIssue(issue);
+    const element = issue.element as HTMLElement;
     
     // Scroll to the element
-    issue.element.scrollIntoView({ 
+    element.scrollIntoView({ 
       behavior: 'smooth', 
       block: 'center' 
     });
     
     // Highlight the element temporarily
-    const originalOutline = issue.element.style.outline;
-    issue.element.style.outline = '3px solid #ef4444';
-    issue.element.style.outlineOffset = '2px';
+    const originalOutline = element.style.outline;
+    element.style.outline = '3px solid #ef4444';
+    element.style.outlineOffset = '2px';
     
     setTimeout(() => {
-      issue.element.style.outline = originalOutline;
+      element.style.outline = originalOutline;
     }, 2000);
     
     onIssueSelect?.(issue.evaluation as any);

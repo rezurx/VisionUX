@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { SurveyResult, SurveyQuestion, AnalyticsMetadata } from '../../types';
 import { PerformanceOptimizer } from '../../analytics';
@@ -291,6 +291,9 @@ const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
       .selectAll('text')
       .style('font-size', '12px');
 
+    // Define margins
+    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+    
     // Add axis labels
     g.append('text')
       .attr('transform', 'rotate(-90)')

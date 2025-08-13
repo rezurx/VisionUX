@@ -3,7 +3,7 @@ import {
   Plus, 
   Trash2, 
   Copy, 
-  Move3D, 
+  Move3d, 
   Eye, 
   Save, 
   Settings, 
@@ -12,7 +12,7 @@ import {
   BarChart3, 
   ToggleLeft, 
   ArrowUpDown,
-  Grid3X3,
+  Grid3x3,
   Star,
   ChevronUp,
   ChevronDown,
@@ -344,7 +344,7 @@ const SurveyBuilder: React.FC<SurveyBuilderProps> = ({
           <div className="space-y-2">
             {question.options?.map((option, index) => (
               <div key={option.id} className="flex items-center space-x-2 p-2 border rounded bg-gray-50">
-                <Move3D className="w-4 h-4 text-gray-400" />
+                <Move3d className="w-4 h-4 text-gray-400" />
                 <span className="text-sm">{index + 1}. {option.text}</span>
               </div>
             ))}
@@ -495,7 +495,7 @@ const SurveyBuilder: React.FC<SurveyBuilderProps> = ({
                   }`}
                 >
                   <div className="text-gray-400 mb-4">
-                    <Grid3X3 className="w-12 h-12 mx-auto" />
+                    <Grid3x3 className="w-12 h-12 mx-auto" />
                   </div>
                   <p className="text-gray-600 mb-2">No questions yet</p>
                   {!readOnly && (
