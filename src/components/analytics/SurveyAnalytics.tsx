@@ -46,22 +46,22 @@ const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
   const calculateStatistics = useCallback((): SurveyStatistics => {
     const totalResponses = surveyResults.length;
     const completedResponses = surveyResults.filter(result => 
-      result.results?.responses?.length === questions.length
+      (result.results?.responses || result.responses)?.length === questions.length
     ).length;
     
     const completionRate = totalResponses > 0 ? (completedResponses / totalResponses) * 100 : 0;
     
     // Calculate average completion time
     const completionTimes = surveyResults
-      .filter(result => result.results?.completionTime)
-      .map(result => result.results.completionTime);
+      .filter(result => result.results?.completionTime || result.completionTime)
+      .map(result => result.results?.completionTime || result.completionTime);
     const averageCompletionTime = completionTimes.length > 0 
       ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length / 1000 / 60 // Convert to minutes
       : 0;
 
     // Calculate average response time per question
     const allResponseTimes = surveyResults.flatMap(result => 
-      result.results?.responses?.map((response: any) => response.responseTime) || []
+      (result.results?.responses || result.responses)?.map((response: any) => response.responseTime) || []
     );
     const averageResponseTime = allResponseTimes.length > 0
       ? allResponseTimes.reduce((sum, time) => sum + time, 0) / allResponseTimes.length / 1000 // Convert to seconds
@@ -70,7 +70,7 @@ const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
     // Calculate drop-off points
     const dropOffPoints = questions.map(question => {
       const questionResponses = surveyResults.filter(result =>
-        result.results?.responses?.some((response: any) => response.questionId === question.id)
+        (result.results?.responses || result.responses)?.some((response: any) => response.questionId === question.id)
       ).length;
       const dropOffRate = totalResponses > 0 ? ((totalResponses - questionResponses) / totalResponses) * 100 : 0;
       return {
@@ -860,14 +860,14 @@ const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">Participant {index + 1}</span>
                   <span className="text-sm text-gray-500">
-                    {result.results?.completionTime ? 
-                      `${(result.results.completionTime / 1000 / 60).toFixed(1)} min` : 
+                    {(result.results?.completionTime || result.completionTime) ? 
+                      `${((result.results?.completionTime || result.completionTime) / 1000 / 60).toFixed(1)} min` : 
                       'Incomplete'
                     }
                   </span>
                 </div>
                 <div className="space-y-2">
-                  {result.results?.responses?.slice(0, 3).map((response: any) => {
+                  {(result.results?.responses || result.responses)?.slice(0, 3).map((response: any) => {
                     const question = questions.find(q => q.id === response.questionId);
                     return (
                       <div key={response.questionId} className="text-sm">
@@ -876,9 +876,9 @@ const SurveyAnalytics: React.FC<SurveyAnalyticsProps> = ({
                       </div>
                     );
                   })}
-                  {(result.results?.responses?.length || 0) > 3 && (
+                  {((result.results?.responses || result.responses)?.length || 0) > 3 && (
                     <div className="text-sm text-gray-500">
-                      +{(result.results?.responses?.length || 0) - 3} more responses
+                      +{((result.results?.responses || result.responses)?.length || 0) - 3} more responses
                     </div>
                   )}
                 </div>

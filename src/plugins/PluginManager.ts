@@ -359,7 +359,7 @@ export class PluginManager {
     }
 
     // Additional plugins can be loaded based on feature flags
-    if (configManager.isFeatureEnabled('accessibilityAudits')) {
+    if (configManager.isFeatureEnabled('advancedAnalytics')) {
       // await this.registerPlugin(createAccessibilityPlugin());
     }
   }

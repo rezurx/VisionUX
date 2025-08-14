@@ -2,7 +2,7 @@
 // VISION UX RESEARCH SUITE - BACKWARD COMPATIBILITY UTILITIES
 // =============================================================================
 
-import { Study, StudyResult, StudyConfiguration, StudySettings, StudyMetadata } from '../types';
+import { Study, StudyResult, StudyConfiguration, StudySettings, StudyMetadata, ResearchMethodMeta, MethodSpecificConfig, RESEARCH_METHOD_METADATA } from '../types';
 import { configManager } from '../config';
 
 /**
@@ -38,6 +38,10 @@ export class BackwardCompatibilityManager {
       configuration: this.createDefaultConfiguration(legacyStudy),
       settings: this.createDefaultSettings(legacyStudy),
       metadata: this.createDefaultMetadata(legacyStudy),
+      
+      // Add required method metadata and configuration
+      methodMeta: this.createDefaultMethodMeta(legacyStudy),
+      methodConfig: this.createDefaultMethodConfig(legacyStudy),
       
       // Initialize multi-method features
       linkedStudies: legacyStudy.linkedStudies || [],
@@ -401,6 +405,75 @@ export class BackwardCompatibilityManager {
       }
     }
     return false;
+  }
+
+  /**
+   * Create default method metadata for legacy studies
+   */
+  private static createDefaultMethodMeta(legacyStudy: any): ResearchMethodMeta {
+    const methodType = legacyStudy.type || 'card-sorting';
+    return RESEARCH_METHOD_METADATA[methodType] || RESEARCH_METHOD_METADATA['card-sorting'];
+  }
+
+  /**
+   * Create default method configuration for legacy studies
+   */
+  private static createDefaultMethodConfig(legacyStudy: any): MethodSpecificConfig {
+    const methodType = legacyStudy.type || 'card-sorting';
+    
+    // Create a basic configuration based on the method type
+    switch (methodType) {
+      case 'card-sorting':
+        return {
+          methodType: 'card-sorting',
+          version: '1.0',
+          sortType: 'open',
+          allowCustomCategories: true,
+          shuffleCards: false,
+          showCardNumbers: true,
+          allowUncategorized: false,
+          cardDisplayMode: 'text'
+        };
+      case 'tree-testing':
+        return {
+          methodType: 'tree-testing',
+          version: '1.0',
+          showBreadcrumbs: true,
+          allowBacktracking: true,
+          showSearchFunctionality: false,
+          taskSuccessCriteria: {}
+        };
+      case 'survey':
+        return {
+          methodType: 'survey',
+          version: '1.0',
+          allowPartialCompletion: true,
+          showProgressIndicator: true,
+          randomizeQuestionOrder: false,
+          randomizeOptionOrder: false,
+          validationSettings: {
+            requireAllRequired: true,
+            allowSkipValidation: false
+          },
+          completionSettings: {
+            showSummaryPage: true,
+            allowReview: false,
+            allowEdit: false
+          }
+        };
+      default:
+        // Default to card-sorting configuration
+        return {
+          methodType: 'card-sorting',
+          version: '1.0',
+          sortType: 'open',
+          allowCustomCategories: true,
+          shuffleCards: false,
+          showCardNumbers: true,
+          allowUncategorized: false,
+          cardDisplayMode: 'text'
+        };
+    }
   }
 }
 

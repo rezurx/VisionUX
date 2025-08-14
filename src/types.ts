@@ -1221,6 +1221,11 @@ export interface SurveyResult {
     experience?: string;
     role?: string;
   };
+  // Nested results property to match usage in SurveyAnalytics
+  results?: {
+    responses?: SurveyResponse[];
+    completionTime?: number;
+  };
 }
 
 // Accessibility Audit Types

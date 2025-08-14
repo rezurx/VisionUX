@@ -2,6 +2,7 @@
 import { AccessibilityResult, AccessibilityEvaluation, Study } from '../types';
 import { WCAGComplianceFramework, ComplianceCertification } from './wcagCompliance';
 import { CrossMethodAccessibilityAnalysis } from './crossMethodAccessibility';
+import { AccessibilityComplianceReport } from './accessibility';
 
 export type ExportFormat = 'json' | 'csv' | 'xlsx' | 'pdf' | 'html' | 'wcag-report' | 'compliance-certificate';
 
@@ -265,7 +266,7 @@ export class AccessibilityExporter {
     // For now, return CSV content as placeholder
     const csvData = this.exportCSV(results, options);
     const encoder = new TextEncoder();
-    return encoder.encode(csvData);
+    return encoder.encode(csvData).buffer;
   }
 
   private async exportPDF(results: AccessibilityResult[], options: ExportOptions): Promise<ArrayBuffer> {
@@ -274,7 +275,7 @@ export class AccessibilityExporter {
     // This would require a PDF generation library like jsPDF or html2pdf
     // For now, return HTML content encoded as placeholder
     const encoder = new TextEncoder();
-    return encoder.encode(htmlContent);
+    return encoder.encode(htmlContent).buffer;
   }
 
   private exportHTML(results: AccessibilityResult[], options: ExportOptions): string {
@@ -310,7 +311,7 @@ export class AccessibilityExporter {
   private exportWCAGReport(results: AccessibilityResult[], options: ExportOptions): string {
     if (!this.complianceReport) {
       const framework = new WCAGComplianceFramework();
-      this.complianceReport = framework.generateComplianceGaps(results);
+      this.complianceReport = framework.generateComplianceGaps(results, 'AA' as any) as unknown as AccessibilityComplianceReport;
     }
 
     const data = {
@@ -357,7 +358,7 @@ export class AccessibilityExporter {
 
     const html = this.generateCertificateHTML(certificate, options.branding);
     const encoder = new TextEncoder();
-    return encoder.encode(html);
+    return encoder.encode(html).buffer;
   }
 
   private generatePDFHTML(results: AccessibilityResult[], options: ExportOptions): string {

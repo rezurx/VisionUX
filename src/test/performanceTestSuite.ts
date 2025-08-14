@@ -432,11 +432,11 @@ export class PerformanceTestSuite {
 
   private static async simulateDataProcessing(dataset: any): Promise<void> {
     // Simulate analytics calculations
-    const totalRecords = Object.values(dataset).reduce((sum, arr: any) => 
+    const totalRecords = Object.values(dataset).reduce((sum: number, arr: any) => 
       sum + (Array.isArray(arr) ? arr.length : 0), 0
     );
     
-    for (let i = 0; i < Math.min(totalRecords / 10, 1000); i++) {
+    for (let i = 0; i < Math.min((totalRecords as number) / 10, 1000); i++) {
       // Simulate statistical calculations
       const mean = Math.random();
       const stdDev = Math.random();

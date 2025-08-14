@@ -25,6 +25,13 @@ interface HierarchyData {
   children?: HierarchyData[];
 }
 
+interface TreemapNode extends d3.HierarchyNode<HierarchyData> {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 interface DesignSystemMetricsProps {
   designSystemResults: DesignSystemResult[];
   components: DesignSystemComponent[];
@@ -724,14 +731,14 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
       return [x, y];
     });
 
-    const lineGenerator = d3.line()
+    const lineGenerator = d3.line<[number, number]>()
       .x(d => d[0])
       .y(d => d[1])
       .curve(d3.curveLinearClosed);
 
     g.append('path')
       .datum(pathData)
-      .attr('d', lineGenerator)
+      .attr('d', lineGenerator as any)
       .style('fill', '#3b82f6')
       .style('opacity', 0.3)
       .style('stroke', '#3b82f6')
@@ -832,37 +839,37 @@ const DesignSystemMetrics: React.FC<DesignSystemMetricsProps> = ({
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 
     const cells = g.selectAll('.usage-cell')
-      .data(hierarchy.leaves())
+      .data(hierarchy.leaves() as TreemapNode[])
       .enter().append('g')
       .attr('class', 'usage-cell')
-      .attr('transform', d => `translate(${(d as any).x0},${(d as any).y0})`);
+      .attr('transform', d => `translate(${(d as TreemapNode).x0},${(d as TreemapNode).y0})`);
 
     cells.append('rect')
-      .attr('width', d => (d as any).x1 - (d as any).x0)
-      .attr('height', d => (d as any).y1 - (d as any).y0)
+      .attr('width', d => (d as TreemapNode).x1 - (d as TreemapNode).x0)
+      .attr('height', d => (d as TreemapNode).y1 - (d as TreemapNode).y0)
       .style('fill', (d, i) => colorScale(i.toString()))
       .style('opacity', 0.8)
       .style('stroke', '#fff')
       .style('stroke-width', 1);
 
     cells.append('text')
-      .attr('x', d => ((d as any).x1 - (d as any).x0) / 2)
-      .attr('y', d => ((d as any).y1 - (d as any).y0) / 2)
+      .attr('x', d => ((d as TreemapNode).x1 - (d as TreemapNode).x0) / 2)
+      .attr('y', d => ((d as TreemapNode).y1 - (d as TreemapNode).y0) / 2)
       .attr('dy', '0.35em')
       .style('text-anchor', 'middle')
-      .style('font-size', d => Math.min(((d as any).x1 - (d as any).x0) / 8, ((d as any).y1 - (d as any).y0) / 4, 12))
+      .style('font-size', d => Math.min(((d as TreemapNode).x1 - (d as TreemapNode).x0) / 8, ((d as TreemapNode).y1 - (d as TreemapNode).y0) / 4, 12))
       .style('font-weight', 'bold')
       .style('fill', '#fff')
-      .text(d => d.data.name);
+      .text(d => d.data.name || '');
 
     cells.append('text')
-      .attr('x', d => (d.x1 - d.x0) / 2)
-      .attr('y', d => (d.y1 - d.y0) / 2 + 15)
+      .attr('x', d => ((d as TreemapNode).x1 - (d as TreemapNode).x0) / 2)
+      .attr('y', d => ((d as TreemapNode).y1 - (d as TreemapNode).y0) / 2 + 15)
       .attr('dy', '0.35em')
       .style('text-anchor', 'middle')
-      .style('font-size', d => Math.min((d.x1 - d.x0) / 10, (d.y1 - d.y0) / 6, 10))
+      .style('font-size', d => Math.min(((d as TreemapNode).x1 - (d as TreemapNode).x0) / 10, ((d as TreemapNode).y1 - (d as TreemapNode).y0) / 6, 10))
       .style('fill', '#fff')
-      .text(d => `${d.data.usage} uses`);
+      .text(d => `${d.data.usage || 0} uses`);
   };
 
   const renderSystemHealth = (

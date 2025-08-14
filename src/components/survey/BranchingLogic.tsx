@@ -30,9 +30,11 @@ interface BranchingLogicProps {
 
 interface BranchingRuleUI extends BranchingRule {
   isExpanded?: boolean;
-  isValid?: boolean;
-  hasWarning?: boolean;
-  warningMessage?: string;
+  isValid?: {
+    isValid: boolean;
+    hasWarning?: boolean;
+    warningMessage?: string;
+  };
 }
 
 interface AdvancedCondition {
@@ -168,7 +170,7 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
             targetId: targetQuestions[Math.min(2, targetQuestions.length - 1)]?.id || ''
           },
           isExpanded: true,
-          isValid: false
+          isValid: { isValid: false }
         };
         break;
       case 'end-survey':
@@ -184,7 +186,7 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
             targetId: ''
           },
           isExpanded: true,
-          isValid: false
+          isValid: { isValid: false }
         };
         break;
       default:
@@ -200,14 +202,12 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
             targetId: targetQuestions[0]?.id || ''
           },
           isExpanded: true,
-          isValid: false
+          isValid: { isValid: false }
         };
     }
 
     const validation = validateRule(newRule);
-    newRule.isValid = validation.isValid;
-    newRule.hasWarning = validation.hasWarning;
-    newRule.warningMessage = validation.warningMessage;
+    newRule.isValid = validation;
 
     const updatedRules = [...rules, newRule];
     setRules(updatedRules);
@@ -221,7 +221,7 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
         const validation = validateRule(updatedRule);
         return {
           ...updatedRule,
-          isValid: validation.isValid,
+          isValid: validation,
           hasWarning: validation.hasWarning,
           warningMessage: validation.warningMessage
         };
@@ -403,7 +403,7 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
           <h3 className="font-medium text-gray-900">Branching Logic</h3>
           {rules.length > 0 && (
             <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-              {rules.filter(r => r.isValid).length} of {rules.length} valid
+              {rules.filter(r => r.isValid?.isValid).length} of {rules.length} valid
             </span>
           )}
         </div>
@@ -488,7 +488,7 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
           {rules.map((rule, index) => (
             <div
               key={rule.id}
-              className={`border rounded-lg ${rule.isValid ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}
+              className={`border rounded-lg ${rule.isValid?.isValid ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}
             >
               {/* Rule Header */}
               <div className="p-3">
@@ -506,19 +506,19 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
                         )}
                         <span>Rule {index + 1}</span>
                       </button>
-                      {!rule.isValid && (
+                      {!rule.isValid?.isValid && (
                         <div className="flex items-center space-x-1 text-red-600">
                           <XCircle className="w-3 h-3" />
                           <span className="text-xs">Incomplete</span>
                         </div>
                       )}
-                      {rule.isValid && !rule.hasWarning && (
+                      {rule.isValid?.isValid && !rule.isValid?.hasWarning && (
                         <div className="flex items-center space-x-1 text-green-600">
                           <CheckCircle className="w-3 h-3" />
                           <span className="text-xs">Valid</span>
                         </div>
                       )}
-                      {rule.hasWarning && (
+                      {rule.isValid?.hasWarning && (
                         <div className="flex items-center space-x-1 text-yellow-600">
                           <AlertCircle className="w-3 h-3" />
                           <span className="text-xs">Warning</span>
@@ -526,11 +526,11 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
                       )}
                     </div>
                     <p className="text-sm text-gray-600">{getRuleDescription(rule)}</p>
-                    {rule.hasWarning && rule.warningMessage && (
+                    {rule.isValid?.hasWarning && rule.isValid?.warningMessage && (
                       <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
                         <div className="flex items-start space-x-1">
                           <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                          <span>{rule.warningMessage}</span>
+                          <span>{rule.isValid?.warningMessage}</span>
                         </div>
                       </div>
                     )}
@@ -688,27 +688,27 @@ const BranchingLogic: React.FC<BranchingLogicProps> = ({
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-green-600">
-                  {rules.filter(r => r.isValid && !r.hasWarning).length}
+                  {rules.filter(r => r.isValid?.isValid && !r.isValid?.hasWarning).length}
                 </div>
                 <div className="text-xs text-gray-600">Valid</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-yellow-600">
-                  {rules.filter(r => r.hasWarning).length}
+                  {rules.filter(r => r.isValid?.hasWarning).length}
                 </div>
                 <div className="text-xs text-gray-600">Warnings</div>
               </div>
             </div>
             
             {/* Rule Summary */}
-            {rules.filter(r => r.hasWarning).length > 0 && (
+            {rules.filter(r => r.isValid?.hasWarning).length > 0 && (
               <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <h4 className="text-sm font-medium text-yellow-800 mb-2">Rule Warnings:</h4>
                 <ul className="text-xs text-yellow-700 space-y-1">
-                  {rules.filter(r => r.hasWarning).map((rule, idx) => (
+                  {rules.filter(r => r.isValid?.hasWarning).map((rule, idx) => (
                     <li key={rule.id} className="flex items-start space-x-1">
                       <span>•</span>
-                      <span>Rule {rules.indexOf(rule) + 1}: {rule.warningMessage}</span>
+                      <span>Rule {rules.indexOf(rule) + 1}: {rule.isValid?.warningMessage}</span>
                     </li>
                   ))}
                 </ul>
