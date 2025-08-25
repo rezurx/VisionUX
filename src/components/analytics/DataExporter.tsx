@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { Download, FileText, Database, Table } from 'lucide-react';
-import { ExportOptions, ExportResult } from '../../types';
+import { Download, FileText, Database, Table, Video, Play } from 'lucide-react';
+import { ExportOptions, ExportResult, Study } from '../../types';
+import VideoExporter from './VideoExporter';
 
 interface DataExporterProps {
   data: any;
   studyName?: string;
+  studies?: Study[];
   onExport?: (result: ExportResult) => void;
 }
 
 const DataExporter: React.FC<DataExporterProps> = ({
   data,
   studyName = 'research-data',
+  studies = [],
   onExport
 }) => {
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
@@ -20,6 +23,7 @@ const DataExporter: React.FC<DataExporterProps> = ({
     aggregationLevel: 'participant'
   });
   const [isExporting, setIsExporting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'video'>('general');
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -295,6 +299,8 @@ const DataExporter: React.FC<DataExporterProps> = ({
   ];
 
   const hasData = Object.values(data).some((value: any) => Array.isArray(value) && value.length > 0);
+  const hasVideoData = studies.some(study => study.type === 'video-analysis') && 
+                      Object.keys(data).some(key => key.includes('video') || data[key]?.some?.((item: any) => item.videoId));
 
   if (!hasData) {
     return (
@@ -306,13 +312,49 @@ const DataExporter: React.FC<DataExporterProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow border p-6">
-      <div className="flex items-center mb-6">
-        <Download className="w-6 h-6 text-blue-600 mr-3" />
-        <h3 className="text-lg font-semibold text-gray-900">Export Research Data</h3>
-      </div>
+    <div className="space-y-6">
+      {/* Header with Tabs */}
+      <div className="bg-white rounded-lg shadow border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center">
+            <Download className="w-6 h-6 text-blue-600 mr-3" />
+            <h3 className="text-lg font-semibold text-gray-900">Export Research Data</h3>
+          </div>
+        </div>
 
-      <div className="space-y-6">
+        {/* Tab Navigation */}
+        {hasVideoData && (
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              <button
+                onClick={() => setActiveTab('general')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'general'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Database className="w-4 h-4 inline mr-2" />
+                General Export
+              </button>
+              <button
+                onClick={() => setActiveTab('video')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'video'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Video className="w-4 h-4 inline mr-2" />
+                Video Analytics
+              </button>
+            </nav>
+          </div>
+        )}
+
+        <div className="p-6">
+          {activeTab === 'general' && (
+            <div className="space-y-6">
         {/* Format Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -439,6 +481,17 @@ const DataExporter: React.FC<DataExporterProps> = ({
               </>
             )}
           </button>
+        </div>
+            </div>
+          )}
+
+          {activeTab === 'video' && hasVideoData && (
+            <VideoExporter
+              studies={studies}
+              videoResults={data}
+              selectedStudyId={undefined}
+            />
+          )}
         </div>
       </div>
     </div>

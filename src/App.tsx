@@ -1,3 +1,4 @@
+import React from 'react'
 import IAEvaluationPlatform from './IAEvaluationPlatform'
 
 function App() {

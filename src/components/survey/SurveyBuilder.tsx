@@ -12,7 +12,7 @@ import {
   BarChart3, 
   ToggleLeft, 
   ArrowUpDown,
-  Grid3x3,
+  Grid,
   Star,
   ChevronUp,
   ChevronDown,
@@ -495,7 +495,7 @@ const SurveyBuilder: React.FC<SurveyBuilderProps> = ({
                   }`}
                 >
                   <div className="text-gray-400 mb-4">
-                    <Grid3x3 className="w-12 h-12 mx-auto" />
+                    <Grid className="w-12 h-12 mx-auto" />
                   </div>
                   <p className="text-gray-600 mb-2">No questions yet</p>
                   {!readOnly && (

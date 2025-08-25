@@ -90,6 +90,10 @@ export interface Study {
   accessibilityGuidelines?: AccessibilityGuideline[];
   designSystemComponents?: DesignSystemComponent[];
   
+  // Video analysis specific data
+  videoFiles?: VideoFile[];
+  videoSettings?: VideoStudySettings;
+  
   // Enhanced method-specific configurations
   methodConfig: MethodSpecificConfig;
   
@@ -1313,27 +1317,8 @@ export interface ComponentEvaluation {
   improvementSuggestions: string[];
 }
 
-// Video Analysis Types (AI-powered)
-export interface VideoAnalysisResult {
-  participantId: string;
-  studyId: number;
-  videoMetadata: {
-    duration: number;
-    resolution: string;
-    frameRate: number;
-  };
-  behaviorAnalysis: {
-    attentionHeatmap: AttentionPoint[];
-    interactionPatterns: InteractionPattern[];
-    emotionAnalysis: EmotionData[];
-    usabilityMetrics: UsabilityMetric[];
-  };
-  insights: {
-    patterns: string[];
-    issues: string[];
-    recommendations: string[];
-  };
-}
+// Video Analysis Types (AI-powered) - Simplified for Sprint 1.1
+// Full AI analysis will be implemented in later sprints
 
 export interface AttentionPoint {
   timestamp: number;
@@ -1700,4 +1685,178 @@ export interface SecurityConfig {
   requireStrongPasswords: boolean;
   twoFactorAuth: boolean;
   auditLogging: boolean;
+}
+
+// =============================================================================
+// VIDEO ANALYSIS SPECIFIC TYPES
+// =============================================================================
+
+export interface VideoFile {
+  id: string;
+  name: string;
+  originalName: string;
+  size: number; // in bytes
+  duration: number; // in seconds
+  format: string; // e.g., 'mp4', 'webm', 'avi'
+  resolution: VideoResolution;
+  frameRate: number;
+  uploadedAt: number; // timestamp
+  url: string; // local URL for uploaded file
+  thumbnail?: string; // thumbnail image URL
+  metadata: VideoFileMetadata;
+  processingStatus: 'uploading' | 'processing' | 'ready' | 'error';
+  processingError?: string;
+}
+
+export interface VideoResolution {
+  width: number;
+  height: number;
+  quality: 'low' | 'medium' | 'high' | 'hd' | '4k';
+}
+
+export interface VideoFileMetadata {
+  codec?: string;
+  bitrate?: number;
+  hasAudio: boolean;
+  hasSubtitles: boolean;
+  chapters?: VideoChapter[];
+  tags?: string[];
+  description?: string;
+}
+
+export interface VideoChapter {
+  id: string;
+  title: string;
+  startTime: number; // in seconds
+  endTime: number; // in seconds
+  description?: string;
+}
+
+export interface VideoStudySettings {
+  // Playback settings
+  autoPlay: boolean;
+  showControls: boolean;
+  allowSeek: boolean;
+  allowSpeedChange: boolean;
+  allowFullscreen: boolean;
+  
+  // Analysis settings  
+  enableTimestamping: boolean;
+  requiredWatchPercentage: number; // 0-100, percentage that must be watched
+  allowRewatch: boolean;
+  maxRewatchCount?: number;
+  
+  // Annotation settings
+  enableAnnotations: boolean;
+  annotationTypes: VideoAnnotationType[];
+  requireAnnotations: boolean;
+  minAnnotations?: number;
+  
+  // Quality control
+  trackViewingBehavior: boolean;
+  detectSkipping: boolean;
+  minimumViewingTime?: number; // in seconds
+  
+  // Participant experience
+  showProgressBar: boolean;
+  showTimestamp: boolean;
+  pauseOnAnnotation: boolean;
+}
+
+export type VideoAnnotationType = 
+  | 'timestamp-comment'
+  | 'region-highlight' 
+  | 'emotion-rating'
+  | 'usability-issue'
+  | 'comprehension-note'
+  | 'suggestion';
+
+export interface VideoAnnotation {
+  id: string;
+  participantId: string;
+  timestamp: number; // in seconds
+  type: VideoAnnotationType;
+  content: string;
+  coordinates?: { x: number; y: number; width?: number; height?: number }; // for region highlights
+  rating?: number; // for emotion ratings or severity scores
+  tags?: string[];
+  createdAt: number; // timestamp
+}
+
+export interface VideoPlaybackEvent {
+  id: string;
+  participantId: string;
+  eventType: 'play' | 'pause' | 'seek' | 'speed-change' | 'fullscreen-toggle' | 'volume-change';
+  timestamp: number; // video timestamp in seconds
+  eventTimestamp: number; // real timestamp when event occurred
+  previousValue?: any; // for speed/volume changes
+  newValue?: any; // for speed/volume changes
+  seekFrom?: number; // for seek events
+  seekTo?: number; // for seek events
+}
+
+export interface VideoAnalysisResult {
+  participantId: string;
+  studyId: number;
+  videoId: string;
+  
+  // Viewing behavior
+  totalWatchTime: number; // actual time spent watching
+  completionPercentage: number; // 0-100
+  rewatchCount: number;
+  averagePlaybackSpeed: number;
+  
+  // Interaction data
+  playbackEvents: VideoPlaybackEvent[];
+  annotations: VideoAnnotation[];
+  
+  // Engagement metrics
+  engagementScore: number; // 0-100
+  attentionSpans: AttentionSpan[];
+  distractionEvents: DistractionEvent[];
+  
+  // Quality indicators
+  skipEvents: SkipEvent[];
+  qualityFlags: VideoQualityFlag[];
+  
+  // Completion data
+  startTime: number;
+  endTime: number;
+  totalSessionTime: number;
+  
+  // Video metadata - Sprint 1.1 basic implementation
+  videoMetadata: {
+    duration: number;
+    resolution: string; // Simplified for compatibility
+    frameRate: number;
+  };
+}
+
+export interface AttentionSpan {
+  startTime: number;
+  endTime: number;
+  duration: number;
+  engagementLevel: 'low' | 'medium' | 'high';
+  indicators: string[]; // what suggested this attention level
+}
+
+export interface DistractionEvent {
+  timestamp: number;
+  type: 'tab-switch' | 'window-blur' | 'long-pause' | 'rapid-seeking';
+  duration?: number;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface SkipEvent {
+  fromTimestamp: number;
+  toTimestamp: number;
+  skippedDuration: number;
+  reason?: 'manual-seek' | 'auto-skip' | 'error-recovery';
+}
+
+export interface VideoQualityFlag {
+  type: 'insufficient-watch-time' | 'excessive-rewatching' | 'suspicious-behavior' | 'technical-issues';
+  severity: 'low' | 'medium' | 'high';
+  message: string;
+  affectedTimeRange?: { start: number; end: number };
 }

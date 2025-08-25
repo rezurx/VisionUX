@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, Network, Palette, Users, TrendingUp, Shield, Layers, GitBranch, Download, FileText } from 'lucide-react';
+import { BarChart3, Network, Palette, Users, TrendingUp, Shield, Layers, GitBranch, Download, FileText, Play } from 'lucide-react';
 import { 
   processStudyResults, 
   AgreementAnalysis, 
@@ -16,6 +16,7 @@ import AccessibilityScorecard from './AccessibilityScorecard';
 import DesignSystemMetrics from './DesignSystemMetrics';
 import CrossMethodAnalysis from './CrossMethodAnalysis';
 import DataExporter from './DataExporter';
+import VideoAnalytics from './VideoAnalytics';
 import AccessibilityDashboard from '../accessibility/AccessibilityDashboard';
 import { generateSampleAccessibilityData } from '../../data/sampleAccessibilityData';
 
@@ -38,7 +39,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 }) => {
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
   const [activeView, setActiveView] = useState<
-    'overview' | 'similarity' | 'dendrogram' | 'rainbow' | 'survey' | 'accessibility' | 'design-system' | 'cross-method' | 'export'
+    'overview' | 'similarity' | 'dendrogram' | 'rainbow' | 'survey' | 'accessibility' | 'design-system' | 'cross-method' | 'video' | 'export'
   >('overview');
 
   // Process and filter study results
@@ -301,6 +302,16 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             />
           </div>
         );
+      case 'video':
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-auto">
+            <VideoAnalytics 
+              studies={studies}
+              results={studyResults}
+              selectedStudyId={selectedStudyId?.toString()}
+            />
+          </div>
+        );
       case 'cross-method':
         return (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 overflow-auto">
@@ -316,14 +327,16 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         );
       case 'export':
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-auto">
             <DataExporter 
               data={{
                 cardSortResults: filteredResults,
                 surveyResults,
                 accessibilityResults,
-                designSystemResults
+                designSystemResults,
+                videoResults: studyResults
               }}
+              studies={studies}
               studyName={studies.find(s => s.id === selectedStudyId)?.name || 'research-data'}
             />
           </div>
@@ -408,6 +421,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               { id: 'survey', label: 'Survey Analytics', icon: FileText, shortLabel: 'Survey' },
               { id: 'accessibility', label: 'Accessibility', icon: Shield, shortLabel: 'A11y' },
               { id: 'design-system', label: 'Design System', icon: Layers, shortLabel: 'DS' },
+              { id: 'video', label: 'Video Analytics', icon: Play, shortLabel: 'Video' },
               { id: 'cross-method', label: 'Cross-Method', icon: GitBranch, shortLabel: 'Cross' }
             ] : []),
             { id: 'export', label: 'Export Data', icon: Download, shortLabel: 'Export' }

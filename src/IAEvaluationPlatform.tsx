@@ -18,6 +18,7 @@ import ParticipantLanding from './components/participant/ParticipantLanding';
 import ParticipantComplete from './components/participant/ParticipantComplete';
 import ParticipantCardSort from './components/participant/ParticipantCardSort';
 import ParticipantTreeTest from './components/participant/ParticipantTreeTest';
+import ParticipantVideoAnalysis from './components/participant/ParticipantVideoAnalysis';
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import CSVUpload from './components/study/CSVUpload';
 import { AccessibilityAuditCreator, AccessibilityDashboard } from './components/accessibility';
@@ -26,6 +27,7 @@ import ParticipantSurvey from './components/participant/ParticipantSurvey';
 import SurveyAnalytics from './components/analytics/SurveyAnalytics';
 import DesignSystemMetrics from './components/analytics/DesignSystemMetrics';
 import PerformanceTestRunner from './components/test/PerformanceTestRunner';
+import { VideoStudyCreator } from './components/video';
 
 const IAEvaluationPlatform = () => {
   // Check if we're in participant mode via URL parameters
@@ -302,6 +304,29 @@ const IAEvaluationPlatform = () => {
             allowEdit: false
           }
         } as SurveyConfig;
+        
+      case 'video-analysis':
+        return {
+          methodType: 'video-analysis',
+          version: '1.0',
+          analysisTypes: ['screen-recording'],
+          recordingSettings: {
+            recordScreen: true,
+            recordCamera: false,
+            recordAudio: true,
+            quality: 'high'
+          },
+          aiProcessing: {
+            enabled: false,
+            features: [],
+            confidenceThreshold: 0.8
+          },
+          privacySettings: {
+            blurFaces: false,
+            maskPII: false,
+            retentionPeriod: 90
+          }
+        } as any; // VideoAnalysisConfig
         
       case 'design-system-review':
         return {
@@ -789,6 +814,20 @@ const IAEvaluationPlatform = () => {
                       <div className="text-xs text-gray-500">Create advanced surveys with logic</div>
                     </div>
                   </button>
+                  <button
+                    onClick={() => {
+                      setCurrentView('video-study-creator');
+                      setShowMethodSelector(false);
+                      setSelectedStudy(null);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-red-50 rounded flex items-center space-x-2 group"
+                  >
+                    <Play className="w-4 h-4 text-red-500 group-hover:text-red-600" />
+                    <div>
+                      <div className="font-medium text-gray-900">Video Analysis Study</div>
+                      <div className="text-xs text-gray-500">Create professional video research studies</div>
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
@@ -1219,6 +1258,19 @@ const IAEvaluationPlatform = () => {
                               <FileText className="w-4 h-4" />
                             </button>
                           )}
+                          {study.type === 'video-analysis' && (
+                            <button
+                              onClick={() => {
+                                setSelectedStudy(study);
+                                setCurrentView('video-study-creator');
+                              }}
+                              className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors duration-150"
+                              title="Edit Video Study"
+                              aria-label="Edit video study"
+                            >
+                              <Play className="w-4 h-4" />
+                            </button>
+                          )}
                           {study.status === 'active' && (
                             <button 
                               onClick={() => generateParticipantLink(study)}
@@ -1348,6 +1400,18 @@ const IAEvaluationPlatform = () => {
                           title="Edit Survey"
                         >
                           <FileText className="w-4 h-4" />
+                        </button>
+                      )}
+                      {study.type === 'video-analysis' && (
+                        <button
+                          onClick={() => {
+                            setSelectedStudy(study);
+                            setCurrentView('video-study-creator');
+                          }}
+                          className="p-2 text-gray-400 hover:text-red-600 rounded-md"
+                          title="Edit Video Study"
+                        >
+                          <Play className="w-4 h-4" />
                         </button>
                       )}
                       {study.status === 'active' && (
@@ -1709,6 +1773,30 @@ const IAEvaluationPlatform = () => {
                 required: true
               }
             ]
+          }),
+          ...(studyType === 'video-analysis' && {
+            videoFiles: [],
+            videoSettings: {
+              autoPlay: false,
+              showControls: true,
+              allowSeek: true,
+              allowSpeedChange: true,
+              allowFullscreen: true,
+              enableTimestamping: true,
+              requiredWatchPercentage: 80,
+              allowRewatch: true,
+              maxRewatchCount: 3,
+              enableAnnotations: true,
+              annotationTypes: ['timestamp-comment', 'usability-issue', 'emotion-rating'],
+              requireAnnotations: false,
+              minAnnotations: 0,
+              trackViewingBehavior: true,
+              detectSkipping: true,
+              minimumViewingTime: 30,
+              showProgressBar: true,
+              showTimestamp: true,
+              pauseOnAnnotation: false
+            }
           })
         };
         
@@ -2484,6 +2572,55 @@ const IAEvaluationPlatform = () => {
           }}
         />
       );
+    } else if (participantStudy.type === 'video-analysis') {
+      return (
+        <ParticipantVideoAnalysis
+          study={participantStudy}
+          participantId={participantId}
+          onComplete={(results) => {
+            // Save video analysis results
+            const newResults = {
+              ...studyResults,
+              [participantStudy.id]: [
+                ...(studyResults[participantStudy.id] || []),
+                {
+                  participantId,
+                  studyId: participantStudy.id,
+                  startTime: participantStartTime,
+                  endTime: Date.now(),
+                  duration: Date.now() - participantStartTime,
+                  results: results
+                }
+              ]
+            };
+            
+            setStudyResults(newResults);
+            localStorage.setItem('ia-evaluator-results', JSON.stringify(newResults));
+            
+            // Update study completion stats
+            const updatedStudies = studies.map(study => {
+              if (study.id === participantStudy.id) {
+                const totalParticipants = (newResults[participantStudy.id] || []).length;
+                return {
+                  ...study,
+                  participants: totalParticipants,
+                  completion: Math.round((totalParticipants / (study.configuration.maxParticipants || totalParticipants)) * 100)
+                };
+              }
+              return study;
+            });
+            
+            setStudies(updatedStudies);
+            localStorage.setItem('ia-evaluator-studies', JSON.stringify(updatedStudies));
+            
+            // Navigate to completion
+            setCurrentView('participant-complete');
+          }}
+          onProgress={(progress) => {
+            console.log('Video analysis progress:', progress);
+          }}
+        />
+      );
     }
     
     return <div>Unsupported study type</div>;
@@ -2600,6 +2737,39 @@ const IAEvaluationPlatform = () => {
         return <CreateStudy />;
       case 'study-settings':
         return <StudySettings />;
+      case 'video-study-creator':
+        return (
+          <VideoStudyCreator
+            existingStudy={selectedStudy}
+            onSave={(study) => {
+              if (selectedStudy) {
+                // Update existing study
+                const updatedStudies = studies.map(s => 
+                  s.id === selectedStudy.id ? { ...selectedStudy, ...study } : s
+                );
+                setStudies(updatedStudies);
+              } else {
+                // Create new study
+                const newStudy = {
+                  ...study,
+                  id: Date.now(),
+                  participants: 0,
+                  completion: 0,
+                  created: new Date().toISOString().split('T')[0],
+                  updated: new Date().toISOString().split('T')[0]
+                } as Study;
+                setStudies(prev => [...prev, newStudy]);
+              }
+              setCurrentView('studies');
+              setSelectedStudy(null);
+            }}
+            onCancel={() => {
+              setCurrentView('studies');
+              setSelectedStudy(null);
+            }}
+            className="min-h-screen bg-gray-50 p-6"
+          />
+        );
       case 'survey-builder':
         return (
           <SurveyBuilder
